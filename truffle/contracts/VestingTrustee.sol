@@ -8,6 +8,7 @@ import './Token.sol';
 /// @author Jose Perez - <jose.perez@diginex.com>
 /// @notice Vesting trustee contract for Diginex ERC20 tokens. Tokens are granted to specific
 ///         addresses and vested under certain criteria (vesting period, cliff period, etc.)
+//          All time units are in seconds since Unix epoch.
 ///         Tokens must be transferred to the VestingTrustee contract address prior to granting them.
 contract VestingTrustee is Ownable {
     using SafeMath for uint256;
@@ -24,7 +25,7 @@ contract VestingTrustee is Ownable {
         uint256 start;
         uint256 cliff;
         uint256 end;
-        uint256 installmentLength; // In seconds.
+        uint256 installmentLength;
         uint256 transferred;
         bool revocable;
     }
@@ -41,13 +42,13 @@ contract VestingTrustee is Ownable {
     event VesterTransferred(address indexed previousVester, address indexed newVester);
 
     /// @dev Constructor that initializes the VestingTrustee contract.
-    /// @param _diginexCoin The address of the previously deployed ERC20 token contract.
+    /// @param _token The address of the previously deployed ERC20 token contract.
     /// @param _vester The vester address.
-    constructor(Token _diginexCoin, address _vester) public {
-        require(_diginexCoin != address(0));
+    constructor(Token _token, address _vester) public {
+        require(_token != address(0));
         require(_vester != address(0));
 
-        token = _diginexCoin;
+        token = _token;
         vester = _vester;
     }
 
@@ -69,7 +70,7 @@ contract VestingTrustee is Ownable {
     }
     
 
-    /// @dev Grant tokens to a specified address. All time units are in seconds since Unix epoch.
+    /// @dev Grant tokens to a specified address.
     ///      Tokens must be transferred to the VestingTrustee contract address prior to calling this
     ///      function. The number of tokens assigned to the VestingTrustee contract address must
     //       always be equal or greater than the total number of vested tokens.
@@ -170,11 +171,11 @@ contract VestingTrustee is Ownable {
         // NOTE: result gets floored because of integer division.
         uint256 installmentsPast = _time.sub(_grant.start).div(_grant.installmentLength);
 
-        // Calculate amount of days in entire vesting period.
-        uint256 vestingDays = _grant.end.sub(_grant.start);
+        // Calculate amount of time in entire vesting period.
+        uint256 vestingPeriod = _grant.end.sub(_grant.start);
 
-        // Calculate and return installments that have passed according to vesting days that have passed.
-        return _grant.value.mul(installmentsPast.mul(_grant.installmentLength)).div(vestingDays);
+        // Calculate and return installments that have passed according to vesting time that have passed.
+        return _grant.value.mul(installmentsPast.mul(_grant.installmentLength)).div(vestingPeriod);
     }
 
     /// @dev Calculate the total amount of vested tokens of a holder at a given time.
